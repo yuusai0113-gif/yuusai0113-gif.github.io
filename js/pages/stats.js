@@ -5,6 +5,18 @@ import { raceBlock, leaderCard, standingsTable } from './shared.js';
 
 const TABS = [['titles', 'タイトル争い'], ['batting', '打撃成績'], ['pitching', '投手成績'], ['ranking', 'ランキング'], ['team', 'チーム成績・順位表'], ['mvp', '月間MVP']];
 
+// チーム全体の打撃成績(打率・出塁率など)。個人の打撃成績が入ると出る
+function teamBattingTiles(t) {
+  if (!t) return '';
+  const tiles = [
+    ['打率', fmt.avg(t.avg)], ['出塁率', fmt.avg(t.obp)], ['打数', t.ab], ['安打', t.h], ['本塁打', t.hr],
+    ['四死球', t.bb + t.hbp], ['三振', t.so], ['盗塁', t.sb],
+  ];
+  return `<div class="section-head" style="margin-top:40px"><div><div class="eyebrow">Team Batting</div><h2>チーム打撃成績</h2></div></div>
+    <div class="stat-tiles">${tiles.map(([l, v]) => `<div class="tile"><div class="tile-label">${l}</div><div class="tile-value">${v}</div></div>`).join('')}</div>
+    <p class="muted" style="font-size:13px;margin-top:10px">打率は安打÷打数、出塁率は（安打＋四死球）÷（打数＋四死球＋犠飛）で、チーム全員の合計から計算しています。</p>`;
+}
+
 export async function stats({ query, navigate }) {
   const d = await api.get(`/api/stats?season=${query.season || ''}`);
   if (!d.season) return { title: '成績', html: `${pageHero('STATS', '成績・ランキング')}<section class="section section--light"><div class="container">${empty('シーズンが登録されていません')}</div></section>` };
@@ -40,6 +52,7 @@ export async function stats({ query, navigate }) {
         ${[['試合', r.g], ['勝', r.w], ['敗', r.l], ['分', r.d], ['勝率', fmt.pct(r.pct)], ['得点', r.rs], ['失点', r.ra], ['得失点差', (r.rs - r.ra > 0 ? '+' : '') + (r.rs - r.ra)]].map(([l, v]) => `<div class="tile"><div class="tile-label">${l}</div><div class="tile-value">${v}</div></div>`).join('')}
       </div>
       <p class="muted" style="font-size:13px">直近5試合 ${form5(r.last5)}　※ 上の数字は練習試合を含む全試合。順位表は公式戦（${d.officialRecord.w}勝${d.officialRecord.l}敗${d.officialRecord.d}分）のみで計算しています。</p>
+      ${teamBattingTiles(d.teamBatting)}
       <div class="section-head" style="margin-top:40px"><div><div class="eyebrow">Standings</div><h2>${esc(state.settings.league_name)} 順位表</h2></div></div>
       ${d.standings.hasLeague ? standingsTable(d.standings) : empty('順位表に載せる他チームが登録されていません（管理画面 → シーズン から登録できます）')}`;
   } else if (tab === 'mvp') {
